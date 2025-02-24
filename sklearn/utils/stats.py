@@ -1,7 +1,9 @@
+# Authors: The scikit-learn developers
+# SPDX-License-Identifier: BSD-3-Clause
+
 import numpy as np
 
 from .extmath import stable_cumsum
-from .fixes import _take_along_axis
 
 
 def _weighted_percentile(array, sample_weight, percentile=50):
@@ -39,7 +41,7 @@ def _weighted_percentile(array, sample_weight, percentile=50):
     if array.shape != sample_weight.shape and array.shape[0] == sample_weight.shape[0]:
         sample_weight = np.tile(sample_weight, (array.shape[1], 1)).T
     sorted_idx = np.argsort(array, axis=0)
-    sorted_weights = _take_along_axis(sample_weight, sorted_idx, axis=0)
+    sorted_weights = np.take_along_axis(sample_weight, sorted_idx, axis=0)
 
     # Find index of median prediction for each sample
     weight_cdf = stable_cumsum(sorted_weights, axis=0)
@@ -68,3 +70,12 @@ def _weighted_percentile(array, sample_weight, percentile=50):
     percentile_in_sorted = sorted_idx[percentile_idx, col_index]
     percentile = array[percentile_in_sorted, col_index]
     return percentile[0] if n_dim == 1 else percentile
+
+
+# TODO: refactor to do the symmetrisation inside _weighted_percentile to avoid
+# sorting the input array twice.
+def _averaged_weighted_percentile(array, sample_weight, percentile=50):
+    return (
+        _weighted_percentile(array, sample_weight, percentile)
+        - _weighted_percentile(-array, sample_weight, 100 - percentile)
+    ) / 2
